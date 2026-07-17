@@ -1,0 +1,26 @@
+# Entorno virtual
+venv/
+ENV/
+*.pyc
+__pycache__/
+
+# Archivos de configuración locales
+*.env
+*.DS_Store
+
+# Cache de Streamlit
+.streamlit/
+
+# Cache de datos
+cache/
+*.csv
+
+# Logs
+*.log
+
+# Configuración de VSCode / IDE
+.vscode/
+.idea/
+
+# credenciales
+credenciales.py
