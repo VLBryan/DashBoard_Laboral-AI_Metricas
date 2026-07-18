@@ -53,7 +53,6 @@ def tasa_handoff(handoff):
         labels={"names": "Tipo de conversación", "values": "Porcentaje"}
     )
 
-    # Opciones de estilo
     fig.update_traces(
         textinfo="label+percent",
         hovertemplate="%{label}: %{percent:.1%}<extra></extra>"
