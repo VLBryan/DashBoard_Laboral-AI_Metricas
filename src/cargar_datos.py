@@ -99,8 +99,12 @@ def save_df_cache(df: pd.DataFrame, path: str):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     df.to_csv(path, index=False)
 
-def load_df_cache(path: str) -> pd.DataFrame:
-    return pd.read_csv(path, parse_dates=["fecha"])
+def load_df_cache(path: str, con_fecha=True) -> pd.DataFrame:
+    df = pd.read_csv(path, index_col=False)
+    if con_fecha:
+        df["fecha"] = pd.to_datetime(df["fecha"])
+    return df
+
 
 # -------------------------
 # Construimos build_all
@@ -115,7 +119,9 @@ def build_all(db_name: str, mongo_uri: Optional[str] = None, cache_dir: str = ".
 
     fechas = pd.date_range(start=min_fecha, end=hoy, freq="D")
 
-    # df de Metricas
+    # -------------------------
+    # df de Métricas generales
+    # -------------------------
     data = []
     for f in fechas:
         row = {
@@ -129,7 +135,9 @@ def build_all(db_name: str, mongo_uri: Optional[str] = None, cache_dir: str = ".
 
     df_metricas = pd.DataFrame(data)
 
-    # df de Actividad
+    # -------------------------
+    # df de Actividad general
+    # -------------------------
     data = []
     for f in fechas:
         row = {
@@ -145,8 +153,47 @@ def build_all(db_name: str, mongo_uri: Optional[str] = None, cache_dir: str = ".
 
     df_actividad = pd.DataFrame(data)
 
+    # -------------------------
+    # df de Chatbot específico
+    # -------------------------
+    aiconv = pd.DataFrame(list(db.aiconversations.find({}, {"user": 1, "requiresHuman": 1, "status": 1})))
+    aimsg = pd.DataFrame(list(db.aimessages.find({}, {"user": 1, "conversation": 1, "intent": 1})))
+
+    if not aiconv.empty and not aimsg.empty:
+        total_convs = len(aiconv)
+        unique_users = aiconv['user'].nunique()
+        total_msgs = len(aimsg)
+        df_chatbot_msgs_per_conv = aimsg.groupby('conversation').size().rename('msgs_count')
+        df_chatbot_top_intents = aimsg['intent'].value_counts().head(20).reset_index()
+        df_chatbot_top_intents.columns = ['intent','count']
+        df_handoff = aiconv['requiresHuman'].value_counts(normalize=True).mul(100).round(2)
+
+        df_chatbot = pd.DataFrame({
+            "total_convs": [total_convs],
+            "unique_users": [unique_users],
+            "total_msgs": [total_msgs]
+        })
+    else:
+        df_chatbot = pd.DataFrame()
+
+
+    # -------------------------
+    # Guardar en cache
+    # -------------------------
     os.makedirs(cache_dir, exist_ok=True)
     save_df_cache(df_metricas, os.path.join(cache_dir, "df_metricas.csv"))
     save_df_cache(df_actividad, os.path.join(cache_dir, "df_actividad.csv"))
+    save_df_cache(df_chatbot, os.path.join(cache_dir, "df_chatbot.csv"))
+    save_df_cache(df_chatbot_msgs_per_conv, os.path.join(cache_dir, "df_chatbot_msgs_per_conv.csv"))
+    save_df_cache(df_chatbot_top_intents, os.path.join(cache_dir, "df_chatbot_top_intents.csv"))
+    save_df_cache(df_handoff, os.path.join(cache_dir, "df_handoff.csv"))
+    
+    return {
+        "df_metricas": df_metricas,
+        "df_actividad": df_actividad,
+        "df_chatbot": df_chatbot,
+        "df_chatbot_msgs_per_conv": df_chatbot_msgs_per_conv,
+        "df_chatbot_top_intents": df_chatbot_top_intents,
+        "df_handoff": df_handoff
+    }
 
-    return {"df_metricas": df_metricas, "df_actividad": df_actividad}
