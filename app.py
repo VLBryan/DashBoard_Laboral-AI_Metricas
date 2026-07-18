@@ -6,6 +6,7 @@ from dateutil.relativedelta import relativedelta
 from config import *
 from src.cargar_datos import build_all, load_df_cache
 from src.grafico_metricas import kpis_diarios, funel_convercion, kpis_actividad
+from src.grafico_chatbot import histograma_mensajes, top_intents, tasa_handoff
 
 # -------------------------
 # Config
@@ -41,6 +42,9 @@ def load_data_cached(db_name: str, mongo_uri: str):
 data_bundle = load_data_cached(DB_NAME, MONGO_URI)
 df_metricas = data_bundle["df_metricas"]
 df_actividad = data_bundle["df_actividad"]
+df_chatbot = data_bundle["df_chatbot"]
+df_chatbot_msgs_per_conv = data_bundle["df_chatbot_msgs_per_conv"]
+df_chatbot_top_intents = data_bundle["df_chatbot_top_intents"]
 
 # -------------------------
 # Sidebar: filtros globales
@@ -84,6 +88,9 @@ if st.sidebar.button("Forzar recarga datos (ETL)"):
     data_bundle = build_all(DB_NAME, MONGO_URI, cache_dir=CACHE_DIR)
     df_metricas = data_bundle["df_metricas"]
     df_actividad = data_bundle["df_actividad"]
+    df_chatbot = data_bundle["df_chatbot"]
+    df_chatbot_msgs_per_conv = data_bundle["df_chatbot_msgs_per_conv"]
+    df_chatbot_top_intents = data_bundle["df_chatbot_top_intents"]
     st.sidebar.success("Datos recargados")
 
 
@@ -165,7 +172,24 @@ with tab6:
     st.plotly_chart(kpis_actividad(df_filtrado_actividad, graf=["feedback"]), use_container_width=True)
 
 with tab7:
+
+    col10, col11, col12, col13 = st.columns(4)
+    col10.metric(label="Conversaciones Unicas", 
+                value=df_chatbot["total_convs"])
+    col11.metric(label="Usuarios únicos", 
+                value=df_chatbot["unique_users"])
+    col12.metric(label="Promedio de mensajes por conversacion", 
+                value=df_chatbot_msgs_per_conv["msgs_count"].max(), 
+                delta=df_chatbot_msgs_per_conv["msgs_count"].avg())
+    col13.metric(label="Chatbot", 
+                value=df_chatbot["handoff_rate"])
+
     st.plotly_chart(kpis_actividad(df_filtrado_actividad, graf=["chatbot"]), use_container_width=True)
+
+
+    st.plotly_chart(histograma_mensajes(df_chatbot_msgs_per_conv), use_container_width=True)
+    st.plotly_chart(top_intents(df_chatbot_top_intents), use_container_width=True)
+    st.plotly_chart(tasa_handoff(df_chatbot_top_intents), use_container_width=True)
 
 
 

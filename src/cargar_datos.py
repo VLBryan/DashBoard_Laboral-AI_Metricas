@@ -115,7 +115,9 @@ def build_all(db_name: str, mongo_uri: Optional[str] = None, cache_dir: str = ".
 
     fechas = pd.date_range(start=min_fecha, end=hoy, freq="D")
 
-    # df de Metricas
+    # -------------------------
+    # df de Métricas generales
+    # -------------------------
     data = []
     for f in fechas:
         row = {
@@ -129,7 +131,9 @@ def build_all(db_name: str, mongo_uri: Optional[str] = None, cache_dir: str = ".
 
     df_metricas = pd.DataFrame(data)
 
-    # df de Actividad
+    # -------------------------
+    # df de Actividad general
+    # -------------------------
     data = []
     for f in fechas:
         row = {
@@ -145,8 +149,44 @@ def build_all(db_name: str, mongo_uri: Optional[str] = None, cache_dir: str = ".
 
     df_actividad = pd.DataFrame(data)
 
+    # -------------------------
+    # df de Chatbot específico
+    # -------------------------
+    aiconv = pd.DataFrame(list(db.aiconversations.find({}, {"user": 1, "requiresHuman": 1, "status": 1})))
+    aimsg = pd.DataFrame(list(db.aimessages.findfind({}, {"user": 1, "conversation": 1, "intent": 1})))
+
+    if not aiconv.empty and not aimsg.empty:
+        total_convs = len(aiconv)
+        unique_users = aiconv['user'].nunique()
+        total_msgs = len(aimsg)
+        msgs_per_conv = aimsg.groupby('conversation').size().rename('msgs_count')
+        top_intents = aimsg['intent'].value_counts().head(20).reset_index()
+        top_intents.columns = ['intent','count']
+        handoff = aiconv['requiresHuman'].value_counts(normalize=True).mul(100).round(2)
+
+        df_chatbot = pd.DataFrame({
+            "total_convs": [total_convs],
+            "unique_users": [unique_users],
+            "total_msgs": [total_msgs],
+            "handoff_rate": [handoff.get(True, 0.0)]
+        })
+    else:
+        df_chatbot = pd.DataFrame()
+
+
+    # -------------------------
+    # Guardar en cache
+    # -------------------------
     os.makedirs(cache_dir, exist_ok=True)
     save_df_cache(df_metricas, os.path.join(cache_dir, "df_metricas.csv"))
     save_df_cache(df_actividad, os.path.join(cache_dir, "df_actividad.csv"))
+    save_df_cache(df_chatbot, os.path.join(cache_dir, "df_chatbot.csv"))
 
-    return {"df_metricas": df_metricas, "df_actividad": df_actividad}
+    return {
+        "df_metricas": df_metricas,
+        "df_actividad": df_actividad,
+        "df_chatbot": df_chatbot,
+        "df_chatbot_msgs_per_conv": msgs_per_conv,
+        "df_chatbot_top_intents": top_intents
+    }
+
