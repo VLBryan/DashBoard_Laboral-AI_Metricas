@@ -9,6 +9,12 @@ def kpis_diarios(df_kpis):
         name="Nuevos usuarios"
     ))
 
+    fig.add_trace(go.Bar(
+        x=df_kpis["fecha"],
+        y=df_kpis["deleted_users"],
+        name="Usuarios eliminados"
+    ))
+
     fig.add_trace(go.Scatter(
         x=df_kpis["fecha"],
         y=df_kpis["active_7d"],
