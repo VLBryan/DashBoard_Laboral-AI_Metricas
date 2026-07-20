@@ -166,7 +166,8 @@ def build_all(db_name: str, mongo_uri: Optional[str] = None, cache_dir: str = ".
         df_chatbot_msgs_per_conv = aimsg.groupby('conversation').size().rename('msgs_count')
         df_chatbot_top_intents = aimsg['intent'].value_counts().head(20).reset_index()
         df_chatbot_top_intents.columns = ['intent','count']
-        df_handoff = aiconv['requiresHuman'].value_counts(normalize=True).mul(100).round(2)
+        df_handoff = aiconv['requiresHuman'].value_counts(normalize=True).mul(100).round(2).reset_index()
+        df_handoff.columns = ["requiresHuman", "porcentaje"]
 
         df_chatbot = pd.DataFrame({
             "total_convs": [total_convs],

@@ -206,7 +206,7 @@ with tab7:
 
     st.plotly_chart(histograma_mensajes(df_chatbot_msgs_per_conv), use_container_width=True)
     st.plotly_chart(top_intents(df_chatbot_top_intents), use_container_width=True)
-    st.plotly_chart(tasa_handoff(df_handoff), use_container_width=True)
+    st.plotly_chart(tasa_handoff(df_handoff["porcentaje"]), use_container_width=True)
 
 
 
