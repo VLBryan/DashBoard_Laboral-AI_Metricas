@@ -21,6 +21,3 @@ cache/
 # Configuración de VSCode / IDE
 .vscode/
 .idea/
-
-# credenciales
-credenciales.py
