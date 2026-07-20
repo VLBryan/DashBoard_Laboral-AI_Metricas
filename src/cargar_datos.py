@@ -46,6 +46,11 @@ def new_users(db, fecha):
     fin = inicio + timedelta(days=1)
     return db.users.count_documents({"createdAt": {"$gte": inicio, "$lt": fin}})
 
+def deleted_users(db, fecha):
+    inicio = fecha.replace(hour=0, minute=0, second=0, microsecond=0)
+    fin = inicio + timedelta(days=1)
+    return db.users.count_documents({"deletedAt": {"$gte": inicio, "$lt": fin}})
+
 def active_count(db, fecha, days=7):
     since = fecha - timedelta(days=days)
 
@@ -114,7 +119,7 @@ def build_all(db_name: str, mongo_uri: Optional[str] = None, cache_dir: str = ".
     db = client[db_name]
 
     # Rango desde el primer registro hasta hoy
-    min_fecha = datetime(2024, 8, 12)  # Fecha mínima fija (primer registro conocido)
+    min_fecha = datetime(2024, 8, 11)  # Fecha mínima fija (primer registro conocido)
     hoy = datetime.utcnow()  # Fecha máxima = hoy
 
     fechas = pd.date_range(start=min_fecha, end=hoy, freq="D")
@@ -127,6 +132,7 @@ def build_all(db_name: str, mongo_uri: Optional[str] = None, cache_dir: str = ".
         row = {
             "fecha": f,
             "new_users": new_users(db, f),
+            "deleted_users": deleted_users(db, f),
             "active_7d": active_count(db, f, 7),
             "payers": payers_count(db, f),
             "payers_per_day": payers_per_day(db, f)
@@ -145,7 +151,7 @@ def build_all(db_name: str, mongo_uri: Optional[str] = None, cache_dir: str = ".
             "cvs": db.cvs.count_documents({"updatedAt": {"$gte": f, "$lt": f + timedelta(days=1)}}),
             "courses": db.courseenrollments.count_documents({"createdAt": {"$gte": f, "$lt": f + timedelta(days=1)}}),
             "applications": db.applications.count_documents({"createdAt": {"$gte": f, "$lt": f + timedelta(days=1)}}),
-            "quizzes": db.quizresults.count_documents({"createdAt": {"$gte": f, "$lt": f + timedelta(days=1)}}),
+            "quizzes": db.userquizdatas.count_documents({"createdAt": {"$gte": f, "$lt": f + timedelta(days=1)}}),
             "feedback": db.employabilities.count_documents({"updatedAt": {"$gte": f, "$lt": f + timedelta(days=1)}, "feedback": {"$exists": True}}),
             "chatbot": db.aiconversations.count_documents({"createdAt": {"$gte": f, "$lt": f + timedelta(days=1)}})
         }
